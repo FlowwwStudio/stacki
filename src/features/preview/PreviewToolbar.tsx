@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { IconProps } from '../../ui/Icons';
 import { CanvasIcon, ChevronRightIcon, DesktopIcon, PhoneIcon, TabletIcon } from '../../ui/Icons';
 import { PreviewSizeControls } from './PreviewSizeControls';
@@ -83,31 +83,24 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
 }
 
 function toolbarItems(props: PreviewToolbarProps): readonly ToolbarItem[] {
-  const devices = DEVICES.map(({ key, Icon, title }): ToolbarItem => ({
-    id: key,
-    priority: props.activeDevice === key ? 90 : 60,
-    content: (
-      <button
-        className="preview-toolbar-action"
-        title={title}
-        aria-pressed={props.activeDevice === key}
-        onClick={() => props.onDevice(key)}
-      >
-        <Icon size={15} />
-      </button>
-    ),
-    menu: (finish) => (
-      <button
-        className="preview-toolbar-action"
-        title={title}
-        aria-pressed={props.activeDevice === key}
-        onClick={() => finish(() => props.onDevice(key))}
-      >
-        <Icon size={15} />
-        <span>{title.split(' — ')[0]}</span>
-      </button>
-    ),
-  }));
+  const devices: ToolbarItem = {
+    id: 'devices',
+    priority: 90,
+    content: <DeviceButtons activeDevice={props.activeDevice} onDevice={props.onDevice} />,
+    menu: (finish) =>
+      DEVICES.map(({ key, Icon, title }) => (
+        <button
+          key={key}
+          className="preview-toolbar-action"
+          title={title}
+          aria-pressed={props.activeDevice === key}
+          onClick={() => finish(() => props.onDevice(key))}
+        >
+          <Icon size={15} />
+          <span>{title.split(' — ')[0]}</span>
+        </button>
+      )),
+  };
   const sizing: readonly ToolbarItem[] = props.sizing
     ? [
         {
@@ -130,10 +123,49 @@ function toolbarItems(props: PreviewToolbarProps): readonly ToolbarItem[] {
         </div>
       ),
     },
-    ...devices,
+    devices,
     ...sizing,
     ...inspectorItems(props.inspector),
   ];
+}
+
+// Treat the original segmented switch as one overflow item so its shared surface
+// and sliding selection remain intact whenever the toolbar has room for it.
+function DeviceButtons({
+  activeDevice,
+  onDevice,
+}: Pick<PreviewToolbarProps, 'activeDevice' | 'onDevice'>) {
+  const buttons = useRef(new Map<FixedDevice, HTMLButtonElement>());
+  const [indicator, setIndicator] = useState<
+    { readonly left: number; readonly width: number } | undefined
+  >();
+  useLayoutEffect(() => {
+    const element = activeDevice === 'custom' ? undefined : buttons.current.get(activeDevice);
+    setIndicator(element ? { left: element.offsetLeft, width: element.offsetWidth } : undefined);
+  }, [activeDevice]);
+  return (
+    <div className="device-btns" role="group" aria-label="Preview device">
+      {indicator && <span className="device-indicator" style={indicator} />}
+      {DEVICES.map(({ key, Icon, title }) => (
+        <button
+          key={key}
+          ref={(element) => {
+            if (element) {
+              buttons.current.set(key, element);
+            } else {
+              buttons.current.delete(key);
+            }
+          }}
+          className={activeDevice === key ? 'on' : ''}
+          title={title}
+          aria-pressed={activeDevice === key}
+          onClick={() => onDevice(key)}
+        >
+          <Icon size={13} />
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function inspectorItems(inspector: PreviewInspectorActions | undefined): readonly ToolbarItem[] {
