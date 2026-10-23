@@ -68,6 +68,7 @@ export async function capturePublishSource(
 export async function publishTreeFiles(
   git: PublishGit,
   tree: string,
+  options: { readonly symbolicLinks?: 'skip' | 'reject' } = {},
 ): Promise<Result<readonly PublishedFile[]>> {
   assert(/^[a-f0-9]{40}$/.test(tree), 'Captured tree has a valid identifier');
   const files: PublishedFile[] = [];
@@ -77,6 +78,13 @@ export async function publishTreeFiles(
     ['ls-tree', '-r', '-l', '-z', tree],
     publishGitEnvironment(git),
     async (record) => {
+      // Startup omits links from its checkout; captures still reject links by default.
+      // The record reader bounds every entry, including links omitted from the manifest.
+      if (options.symbolicLinks === 'skip') {
+        if (record.startsWith('120000 blob ')) {
+          return ok(undefined);
+        }
+      }
       const parsed = parsePublishTreeFile(record);
       if (!parsed.ok) {
         return parsed;

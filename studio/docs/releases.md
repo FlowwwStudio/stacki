@@ -18,13 +18,9 @@ packages pass their gates. Publishing an artifact never updates customer project
 
 ## Accepting an update
 
-In hosted Studio, open the account menu and choose **Check for updates**. An accepted
-update replaces the entire Studio implementation, including added or customized
-files. Confirm **Replace Studio customizations**, then choose **Prepare update for
-review**. Studio creates a GitHub branch. Review and merge it into the configured
-deployment branch, then deploy the updated CMS. The current deployment stays on its
-existing version until that deployment finishes. **Keep current version** makes no
-repository changes. Managing updates always requires repository write permission.
+The hosted account menu shows the installed Studio version. Updates are managed
+through the CLI described below. Review and commit the updated Studio source, then
+deploy the CMS. Publishing a new Stacki release does not change a hosted installation.
 
 The replacement keeps website source/content/assets outside `studio/`, the project's
 `studio/cloudflare/` configuration, `.env*`, `.dev.vars*`, `.studio`, `.studio-state`,

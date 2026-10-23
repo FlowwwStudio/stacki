@@ -1,4 +1,4 @@
-import { StudioUpdates } from '../updates/StudioUpdates';
+import release from '../../shared/release.json';
 import { StoragePanel } from '../storage/StoragePanel';
 import type { Session } from './useSession';
 import { StackiLogo } from '../../shared/ui/StackiLogo';
@@ -35,7 +35,7 @@ export function AccountMenu({ saved, session }: { saved: boolean; session: Sessi
       >
         <RoleMenu saved={saved} close={close} />
         <SoundToggle />
-        {session?.kind === 'github' && <StudioUpdates />}
+        {session?.kind === 'github' && <span>Stacki Studio {release.version}</span>}
         {session?.kind === 'github' ? (
           <>
             <strong>@{session.login}</strong>

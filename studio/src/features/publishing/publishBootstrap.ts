@@ -67,7 +67,7 @@ async function restorePublishCheckout(
   if (!fetched.ok) {
     return fetched;
   }
-  const files = await publishTreeFiles(git, baseline);
+  const files = await publishTreeFiles(git, baseline, { symbolicLinks: 'skip' });
   if (!files.ok) {
     return files;
   }
@@ -83,6 +83,9 @@ async function restorePublishCheckout(
   if (!index.ok) {
     return index;
   }
-  const checkout = await publishGit(git, ['checkout-index', '--all']);
+  // Agent configuration can contain links unrelated to the site. Preserve them in
+  // the baseline, but only materialize validated regular files in the runtime.
+  const paths = files.value.map((file) => file.path + '\0').join('');
+  const checkout = await publishGit(git, ['checkout-index', '--stdin', '-z'], paths);
   return checkout.ok ? ok(baseline) : checkout;
 }

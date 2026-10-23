@@ -1,4 +1,5 @@
-import { stackiFavicon } from '../../shared/stackiBrand';
+import { githubIconPath } from '../../../vendor/stacki/src/ui/iconPaths';
+import { stackiFavicon, stackiMarkPath } from '../../shared/stackiBrand';
 import { parseProfile, type GitHubProfile } from './profile';
 import { record, string } from '../../shared/validation';
 import { cookie, sessionCookie, signSession, verifySession } from './session';
@@ -145,7 +146,37 @@ export function loginPage(
     ? `<p>Reference: ${reference.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80)}</p>`
     : '';
   return new Response(
-    `<!doctype html><html><meta name="viewport" content="width=device-width"><title>Sign in · Stacki Studio</title><link rel="icon" type="image/svg+xml" href="${stackiFavicon}"><style>body{background:#111;color:#eee;font:14px system-ui;display:grid;place-items:center;min-height:95vh}main{text-align:center;max-width:32rem;padding:24px}a{display:inline-block;background:#eee;color:#111;border-radius:8px;padding:12px 20px;text-decoration:none;margin:20px}p{color:#999;line-height:1.6}</style><main><h1>${problem ? 'Unable to sign in' : 'Welcome to your studio'}</h1><p>${message}</p><a href="/studio/auth/login">Sign in with GitHub</a>${detail}</main></html>`,
+    `<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Stacki Studio</title>
+<link rel="icon" type="image/svg+xml" href="${stackiFavicon}">
+<style>
+body{background:#111;color:#eee;font:14px system-ui;display:grid;place-items:center;
+  min-height:100dvh;margin:0}
+main{text-align:center;max-width:32rem;padding:24px}
+.studio-logo{display:block;margin:0 auto 24px}
+a{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#eee;
+  color:#111;border-radius:8px;padding:12px 20px;text-decoration:none;margin:20px 0}
+a svg{flex-shrink:0}
+p{color:#999;line-height:1.6}
+</style>
+</head>
+<body><main>
+<svg class="studio-logo" width="48" height="48" viewBox="0 0 458 458"
+  role="img" aria-label="Stacki">
+  <path d="${stackiMarkPath}" fill="currentColor" />
+</svg>
+<h1>${problem ? 'Unable to sign in' : 'Welcome to your studio'}</h1>
+<p>${message}</p>
+<a href="/studio/auth/login">
+  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="${githubIconPath}" fill="currentColor" />
+  </svg>
+  <span>Sign in with GitHub</span>
+</a>${detail}
+</main></body></html>`,
     {
       status,
       headers: {
