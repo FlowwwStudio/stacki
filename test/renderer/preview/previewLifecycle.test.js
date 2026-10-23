@@ -678,7 +678,10 @@ test(
       assert.equal(sized.style.height, '1336px');
       assert.match(sized.style.transform, /scale\(0\.5\)/);
       assert.equal(document.querySelector('[aria-label="Canvas scale"]').textContent, '50%');
-      assert.equal(document.querySelector('.device-btns button.on').title, 'Desktop — 1');
+      assert.equal(
+        document.querySelector('.preview-toolbar-action[aria-pressed="true"]').title,
+        'Desktop — 1',
+      );
       assert.equal(
         document.querySelector('iframe'),
         frame,

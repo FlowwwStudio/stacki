@@ -1,9 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { IconProps } from '../../ui/Icons';
 import { CanvasIcon, ChevronRightIcon, DesktopIcon, PhoneIcon, TabletIcon } from '../../ui/Icons';
 import { PreviewSizeControls } from './PreviewSizeControls';
 import { GuideMenu, type GuideMenuProps } from './GuideMenu';
 import type { PreviewSizeControlsProps } from './PreviewSizeControls';
+import { ToolbarOverflow, type ToolbarItem } from './ToolbarOverflow';
 
 export type PreviewDevice = 'desktop' | 'tablet' | 'phone' | 'canvas' | 'custom';
 type FixedDevice = Exclude<PreviewDevice, 'custom'>;
@@ -53,66 +54,109 @@ export function deviceWidth(device: PreviewDevice): number | undefined {
   return DEVICES.find((entry) => entry.key === device)?.width;
 }
 
-export function PreviewToolbar({
-  crumbs,
-  onCrumb,
-  activeDevice,
-  onDevice,
-  sizing,
-  guide,
-}: {
+export interface PreviewInspectorActions {
+  readonly settings: () => void;
+  readonly style: (() => void) | undefined;
+}
+
+interface PreviewToolbarProps {
   readonly crumbs: readonly PreviewCrumb[];
   readonly onCrumb?: (id: string | undefined) => void;
   readonly activeDevice: PreviewDevice;
   readonly onDevice: (device: PreviewDevice) => void;
   readonly sizing?: PreviewSizeControlsProps;
   readonly guide: GuideMenuProps;
-}) {
-  const shownCrumbs = useFoldedCrumbs(crumbs);
-  const buttonRefs = useRef(new Map<FixedDevice, HTMLButtonElement>());
-  const [indicator, setIndicator] = useState<
-    | {
-        readonly left: number;
-        readonly width: number;
-      }
-    | undefined
-  >(undefined);
-  useLayoutEffect(() => {
-    const element = activeDevice === 'custom' ? undefined : buttonRefs.current.get(activeDevice);
-    setIndicator(element ? { left: element.offsetLeft, width: element.offsetWidth } : undefined);
-  }, [activeDevice]);
+  readonly inspector?: PreviewInspectorActions | undefined;
+}
+
+export function PreviewToolbar(props: PreviewToolbarProps) {
+  const shownCrumbs = useFoldedCrumbs(props.crumbs);
   return (
-    <div className="preview-toolbar">
+    <ToolbarOverflow items={toolbarItems(props)}>
       <CrumbTrail
         crumbs={shownCrumbs.crumbs}
-        {...(onCrumb === undefined ? {} : { onCrumb })}
+        {...(props.onCrumb === undefined ? {} : { onCrumb: props.onCrumb })}
         onExpand={shownCrumbs.expand}
       />
-      <GuideMenu {...guide} />
-      <div className="device-btns">
-        {indicator && <span className="device-indicator" style={indicator} />}
-        {DEVICES.map(({ key, Icon, title }) => (
-          <button
-            key={key}
-            ref={(element) => {
-              // React passes null when the button unmounts.
-              if (element === null) {
-                buttonRefs.current.delete(key);
-              } else {
-                buttonRefs.current.set(key, element);
-              }
-            }}
-            className={activeDevice === key ? 'on' : ''}
-            title={title}
-            onClick={() => onDevice(key)}
-          >
-            <Icon size={13} />
-          </button>
-        ))}
-      </div>
-      {sizing && <PreviewSizeControls {...sizing} />}
-    </div>
+    </ToolbarOverflow>
   );
+}
+
+function toolbarItems(props: PreviewToolbarProps): readonly ToolbarItem[] {
+  const devices = DEVICES.map(({ key, Icon, title }): ToolbarItem => ({
+    id: key,
+    priority: props.activeDevice === key ? 90 : 60,
+    content: (
+      <button
+        className="preview-toolbar-action"
+        title={title}
+        aria-pressed={props.activeDevice === key}
+        onClick={() => props.onDevice(key)}
+      >
+        <Icon size={15} />
+      </button>
+    ),
+    menu: (finish) => (
+      <button
+        className="preview-toolbar-action"
+        title={title}
+        aria-pressed={props.activeDevice === key}
+        onClick={() => finish(() => props.onDevice(key))}
+      >
+        <Icon size={15} />
+        <span>{title.split(' — ')[0]}</span>
+      </button>
+    ),
+  }));
+  const sizing: readonly ToolbarItem[] = props.sizing
+    ? [
+        {
+          id: 'sizing',
+          priority: 20,
+          content: <PreviewSizeControls {...props.sizing} />,
+          menu: () => props.sizing && <PreviewSizeControls {...props.sizing} />,
+        },
+      ]
+    : [];
+  return [
+    {
+      id: 'guide',
+      priority: 30,
+      content: <GuideMenu {...props.guide} />,
+      menu: () => (
+        <div className="preview-toolbar-menu-control">
+          <span>Column guide</span>
+          <GuideMenu {...props.guide} />
+        </div>
+      ),
+    },
+    ...devices,
+    ...sizing,
+    ...inspectorItems(props.inspector),
+  ];
+}
+
+function inspectorItems(inspector: PreviewInspectorActions | undefined): readonly ToolbarItem[] {
+  if (!inspector) {
+    return [];
+  }
+  return [
+    { id: 'settings', label: 'Settings', run: inspector.settings },
+    ...(inspector.style ? [{ id: 'style', label: 'Style', run: inspector.style }] : []),
+  ].map(({ id, label, run }) => ({
+    id,
+    priority: 100,
+    content: (
+      <button className="preview-toolbar-action" onClick={run}>
+        {label}
+      </button>
+    ),
+    menu: (finish) => (
+      <button className="preview-toolbar-action" onClick={() => finish(run)}>
+        {label}
+      </button>
+    ),
+  }));
 }
 
 function useFoldedCrumbs(crumbs: readonly PreviewCrumb[]): {
